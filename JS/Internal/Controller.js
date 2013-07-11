@@ -1,17 +1,17 @@
 ﻿//Controller is responsible for managing the item, list and edit views
 Namespace.CRUD.Controller = (function (options) {
-
-	//Global reference to a single edit view
-	var editView; //editView's model will be a clone of the item currently being edited / added
+		
+	var editView; //Global reference to a single edit view
+	var editModel; //editView's model will be a clone of the item currently being edited / added
+	var editing = false;
 
 	//ItemView is only responsible for the view-mode UI, the editView is responsible for the edit-mode UI
 	var ItemView = Backbone.View.extend({
-		template: _.template(Namespace.Templating.Render("Namespace/CRUD/ItemView")),
+		template: _.template($("#templateItemView").html()),
 		tagName: "li",
 		events: { "click .actionEdit": "edit" },
 		model: Namespace.CRUD.ItemModel,
 		initialize: function () {
-			_.bindAll(this);
 			this.bindModel();
 		},
 		bindModel: function () {
@@ -22,11 +22,12 @@ Namespace.CRUD.Controller = (function (options) {
 		renderAndShow: function() {
 			this.render().fadeIn(200);
 		},
-		render: function () { 
+		render: function () {
 			this.$el.html(this.template(this.model.toJSON()));
-			return this.$el; 
+			return this.$el;
 		},
 		edit: function () {
+			if (editing) return false;
 			var self = this;
 			editView.model.set(this.model.toJSON()); //set editView's model attributes => will trigger render() on the editView
 			
@@ -46,12 +47,14 @@ Namespace.CRUD.Controller = (function (options) {
 		el: $(".crudContainer"),
 		listContainer: null,
 		noItemsContainer: null,
+		editing: false,
 		collection: Namespace.CRUD.ItemCollection,
 		events: { "click .actionAdd": "addNew" },
 		initialize: function () {
-			_.bindAll(this);
+			_.bindAll(this, "saved");
 			this.bindContainers();
 			this.bindCollection();
+			this.bindEditModel();
 			this.bindEditView();
 			this.render();
 		},
@@ -63,14 +66,24 @@ Namespace.CRUD.Controller = (function (options) {
 			this.collection.on("add", this.addedToCollection, this);
 			this.collection.on("remove", this.removedFromCollection, this);
 		},
+		bindEditModel: function() {
+			editModel = new Namespace.CRUD.ItemModel;
+			editModel.on("deleted", this.deleted, this);
+			editModel.on("cancelled", this.cancelled, this);
+			editModel.on("saved", this.saved, this);
+			editModel.on("editStart", this.editStart, this);
+			editModel.on("editEnd", this.editEnd, this);
+		},
 		bindEditView: function () {
-			//instantiate global editView
-			editView = new Namespace.CRUD.EditView({
-				model: new Namespace.CRUD.ItemModel,
-				deleted: this.deleted,
-				cancelled: this.cancelled,
-				saved: this.saved
-			});
+			editView = new Namespace.CRUD.EditView({ model: editModel });
+		},
+		editStart: function() {
+			editing = true;
+			this.$el.find(".actionAdd, .actionEdit").addClass("disabled");
+		},
+		editEnd: function() {
+			editing = false;
+			this.$el.find(".actionAdd, .actionEdit").removeClass("disabled");
 		},
 		render: function () {
 			var self = this;
@@ -89,6 +102,7 @@ Namespace.CRUD.Controller = (function (options) {
 			el.fadeIn(200);
 		},
 		addNew: function () {
+			if (editing) return false;
 			var newModel = new Namespace.CRUD.ItemModel;
 			editView.model.set(newModel.toJSON());
 			this.listContainer.prepend(editView.el);
@@ -114,17 +128,19 @@ Namespace.CRUD.Controller = (function (options) {
 			if (itemModel) itemModel.trigger("cancelled");
 			else if (this.collection.isEmpty()) this.noItemsContainer.fadeIn(200);
 		},
-		saved: function (id, response) {
-			var oldModel = this.collection.get(id);
+		saved: function (model) {
+			var oldModel = this.collection.get(model.id);
 			var isNew = !oldModel; //if a model with the returned "id" is not in the collection, then it is new
-			var newModel = new Namespace.CRUD.ItemModel(response.itemModel); //new model returned from server
+			var newModel = new Namespace.CRUD.ItemModel(model.attributes); //new model returned from server
 
 			if (isNew) {
+				var newId = _.max(this.collection.models, function(mdl) { return mdl.id; }).id + 1;
+				newModel.set("id", newId);
 				newModel.set("IsNew", true);
 				this.collection.add(newModel);
 			} else oldModel.set(newModel.toJSON()); //will trigger renderAndShow() on the item view
 		}
 	});
-
-	var listView = new ListView({ collection: new Namespace.CRUD.ItemCollection(options.itemCollection) });
+		
+	var listView = new ListView({ collection: new Namespace.CRUD.ItemCollection(options.data) });
 });
