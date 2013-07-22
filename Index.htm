@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8"/>
+		<title>Editable lists with Backbone.js</title>
+		<link rel="stylesheet" href="CSS/Index.css"/>
+	</head>
+	<body>
+		<div class="masterContainer">
+			<h1>Editable lists with Backbone.js</h1>
+			<p class="intro">
+				Here's a simple demo...
+			<p>
+			<article class="crudContainer">
+				<header>
+					<a href="#" class="actionAdd">+Add Book</a>
+					<h2>Book List</h2>
+				</header>
+				<ul class="listContainer"></ul>
+				<p class="noItemsContainer">- No books in list -</p>
+			</article>
+		</div>
+		
+		<script type="text/template" id="templateItemView">
+			<span class="title truncate">{{Title}}</span> - <span class="author truncate">{{Author}}</span> <a href="#" class="actionEdit">Edit</a>
+		</script>
+		<script type="text/template" id="templateEditView">
+			<div class="editRow">
+				<label for="txtTitle">Title:</label><input type="text" id="txtTitle" class="txt" name="Title" value="{{Title}}"/>
+			</div>
+			<div class="editRow">
+				<label for="txtAuthor">Author:</label><input type="text" id="txtAuthor" class="txt" name="Author" value="{{Author}}"/>
+			</div>
+			<div class="actionsContainer">
+				<input type="button" value="Save" class="btn actionSave">
+				<input type="button" value="Cancel" class="btn actionCancel"/>
+				<a href="#" class="actionDelete">Delete</a>
+			</div>
+		</script>
+		
+		<script src="JS/External/jquery-1.10.2.min.js"></script>
+		<script src="JS/External/underscore-min.js"></script>
+		<script src="JS/External/backbone-min.js"></script>
+		<script src="JS/External/jquery.serializeobject.js"></script>
+		<script src="JS/Internal/_TemplateSettings.js"></script>
+		<script src="JS/Internal/Namespace.js"></script>
+		<script src="JS/Internal/Data.js"></script>
+		<script src="JS/Internal/Models.js"></script>
+		<script src="JS/Internal/EditView.js"></script>
+		<script src="JS/Internal/Controller.js"></script>
+		
+		<script>
+			//overriding Backbone.sync for the purposes of this demo
+			Backbone.sync = function (method, model, options) {
+				options.success(model, {}, options);
+			};
+			
+			$(document).ready(function() {
+				Namespace.CRUD.ItemModel.prototype.defaults = { id: 0, Title: "", Author: "" };
+				Namespace.CRUD.Controller({data: Namespace.CRUD.Data });
+			});
+		</script>
+	</body>
+</html>
